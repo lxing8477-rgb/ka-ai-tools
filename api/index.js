@@ -7,8 +7,8 @@ module.exports = async (req, res) => {
   const url = new URL(req.url, `${protocol}://${host}`);
   const topic = url.searchParams.get('topic') || "生活";
 
-  // 关键微调：这里加上了 -latest
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+  // 【终极变动】：去掉 v1beta，直接用 v1 版本，模型名用最稳的 gemini-1.5-flash
+  const apiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   const data = {
     contents: [{
@@ -24,19 +24,24 @@ module.exports = async (req, res) => {
     });
 
     const result = await response.json();
-    if (result.error) throw new Error(result.error.message);
+    
+    // 增加一个详细报错检查，让我们一眼看出是哪里的问题
+    if (result.error) {
+      return res.status(200).send(`<h3>❌ Google 返回了错误</h3><p>代码：${result.error.code}</p><p>消息：${result.error.message}</p>`);
+    }
 
     const aiText = result.candidates[0].content.parts[0].text;
 
     res.status(200).send(`
-      <div style="padding: 20px; font-family: sans-serif; max-width: 500px; margin: auto; border: 1px solid #eee; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-        <h2 style="color: #0070f3;">✨ Ka 的灵感生成器</h2>
-        <p style="font-size: 1.2em; line-height: 1.6; background: #fdfdfd; padding: 15px; border-radius: 8px; color: #333;">${aiText}</p>
-        <p style="color: #999; font-size: 0.8em;">话题：${topic}</p>
-        <a href="/api/index?topic=命运" style="color: #0070f3; text-decoration: none; font-weight: bold;">[ 换个话题 ]</a>
+      <div style="padding: 20px; font-family: sans-serif; max-width: 500px; margin: auto; border: 2px solid #000; border-radius: 15px;">
+        <h2 style="background: #000; color: #fff; padding: 10px; display: inline-block;">Ka 的灵感推文</h2>
+        <p style="font-size: 1.3em; line-height: 1.5; font-weight: bold;">"${aiText}"</p>
+        <hr>
+        <p>话题：${topic}</p>
+        <button onclick="window.location.reload()">再来一条</button>
       </div>
     `);
   } catch (error) {
-    res.status(500).send(`<h3>❌ 唤醒失败</h3><p>具体原因：${error.message}</p>`);
+    res.status(500).send(`<h3>❌ 彻底唤醒失败</h3><p>本地报错：${error.message}</p>`);
   }
 };
